@@ -44,6 +44,7 @@ import { getWorkspaceFoldersByPrefixes } from '../../../shared/utilities/workspa
 import { openDeletedDiff, openDiff } from '../../../amazonq/commons/diff'
 import { i18n } from '../../../shared/i18n-helper'
 import globals from '../../../shared/extensionGlobals'
+import fs from 'fs-extra'
 
 export interface ChatControllerEventEmitters {
     readonly processHumanChatMessage: EventEmitter<any>
@@ -289,6 +290,24 @@ export class FeatureDevController {
         if (message.message === undefined) {
             this.messenger.sendErrorMessage('chatMessage should be set', message.tabID, 0, undefined)
             return
+        }
+
+        if (message.message.toLowerCase().includes('@template')) {
+            const uri = await createSingleFileDialog({
+                canSelectFolders: false,
+                canSelectFiles: true,
+            }).prompt()
+            if (uri) {
+                if (uri instanceof vscode.Uri) {
+                    const fileContent = fs.readFileSync(uri.path, 'utf8')
+                    message.message = fileContent
+                    this.messenger.sendAnswer({
+                        type: 'answer',
+                        tabID: message.tabID,
+                        message: `Using the contents of ${uri.path} as a prompt`,
+                    })
+                }
+            }
         }
 
         /**

@@ -560,7 +560,7 @@ export class ChatController {
         }
         triggerPayload.useRelevantDocuments = false
         if (triggerPayload.message) {
-            triggerPayload.useRelevantDocuments = triggerPayload.message.includes(`@workspace`)
+            triggerPayload.useRelevantDocuments = triggerPayload.message.toLowerCase().includes(`@workspace`)
             if (triggerPayload.useRelevantDocuments) {
                 triggerPayload.message = triggerPayload.message.replace(/@workspace/g, '')
                 if (CodeWhispererSettings.instance.isLocalIndexEnabled()) {
