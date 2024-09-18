@@ -2,10 +2,12 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0
  */
+import * as vscode from 'vscode'
 import { Event as VSCodeEvent, Uri } from 'vscode'
 import { EditorContextExtractor } from '../../editor/context/extractor'
 import { ChatSessionStorage } from '../../storages/chatSession'
 import { Messenger, StaticTextResponseType } from './messenger/messenger'
+import fs from 'fs-extra'
 import {
     PromptMessage,
     ChatTriggerType,
@@ -49,6 +51,7 @@ import { CodeWhispererSettings } from '../../../codewhisperer/util/codewhisperer
 import { getSelectedCustomization } from '../../../codewhisperer/util/customizationUtil'
 import { FeatureConfigProvider } from '../../../shared/featureConfig'
 import { getHttpStatusCode, AwsClientResponseError } from '../../../shared/errors'
+import { createSingleFileDialog } from '../../../shared/ui/common/openDialog'
 
 export interface ChatControllerMessagePublishers {
     readonly processPromptChatMessage: MessagePublisher<PromptMessage>
@@ -561,6 +564,19 @@ export class ChatController {
         triggerPayload.useRelevantDocuments = false
         if (triggerPayload.message) {
             triggerPayload.useRelevantDocuments = triggerPayload.message.toLowerCase().includes(`@workspace`)
+            const useTemplate = triggerPayload.message.toLowerCase().includes('@template')
+            if (useTemplate) {
+                const uri = await createSingleFileDialog({
+                    canSelectFolders: false,
+                    canSelectFiles: true,
+                }).prompt()
+                if (uri) {
+                    if (uri instanceof vscode.Uri) {
+                        const fileContent = fs.readFileSync(uri.path, 'utf8')
+                        triggerPayload.message = fileContent
+                    }
+                }
+            }
             if (triggerPayload.useRelevantDocuments) {
                 triggerPayload.message = triggerPayload.message.replace(/@workspace/g, '')
                 if (CodeWhispererSettings.instance.isLocalIndexEnabled()) {
